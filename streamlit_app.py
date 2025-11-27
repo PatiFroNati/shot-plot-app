@@ -96,6 +96,9 @@ def build_specs_fig():
     fig = go.Figure()
     for ring in sorted(rings, key=lambda r: r["diameter"], reverse=True):
         radius_px = (ring["diameter"] / 2) * pixels_per_mm
+        fill_rgba = ring["color"]
+        if len(fill_rgba) == 7:  # hex color e.g. #FFFFFF
+            fill_rgba = f"{fill_rgba}99"  # add alpha (~60%)
         fig.add_shape(
             type="circle",
             xref="x",
@@ -105,8 +108,8 @@ def build_specs_fig():
             x1=canvas_width / 2 + radius_px,
             y1=canvas_height / 2 + radius_px,
             line=dict(color=ring["color"], width=2),
-            fillcolor=ring["color"],
-            opacity=0.15 if ring["color"] == "#FFFFFF" else 0.3,
+            fillcolor=fill_rgba,
+            opacity=1.0,
         )
 
     fig.update_xaxes(visible=False, range=[0, canvas_width], scaleanchor="y", scaleratio=1)
