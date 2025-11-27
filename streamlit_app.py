@@ -128,10 +128,9 @@ def build_specs_fig():
                 y=canvas_height / 2 - radius_px,
                 text=ring["ring"],
                 showarrow=False,
-                font=dict(color="#000000", size=12, family="Monospace"),
-                bgcolor="rgba(255,255,255,0.7)",
-                xanchor="center",
-                yanchor="bottom",
+                font=dict(color="#000000", size=12, family="Arial"),
+                xanchor="left",
+                yanchor="top",
             )
 
     fig.update_xaxes(visible=False, range=[0, canvas_width], scaleanchor="y", scaleratio=1)
