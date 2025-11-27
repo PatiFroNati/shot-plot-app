@@ -5,23 +5,23 @@ from streamlit_plotly_events import plotly_events
 import math
 import json
 
-# --- Load target specs ---
+# Load target specs
 with open("target_specs.json", "r") as f:
     specs = json.load(f)
 
 target = next(t for t in specs["targets"] if t["type"] == "ISSF 10m Air Rifle Target")
 rings = target["rings"]
 
-# --- Initialize shot log ---
+# Initialize shot log
 if "shots" not in st.session_state:
     st.session_state.shots = []
 
 st.title("🔫 10m Air Rifle Shot Tracker")
 
-# --- Create target plot ---
+# Build target figure
 fig = go.Figure()
 
-# Draw concentric rings (largest first)
+# Draw rings largest → smallest
 for ring in sorted(rings, key=lambda r: r["diameter"], reverse=True):
     fig.add_shape(
         type="circle",
@@ -50,15 +50,15 @@ fig.update_layout(
     title="Click to record a shot"
 )
 
-# --- Capture click (this both renders and listens) ---
+# Render chart and capture click
 click_data = plotly_events(fig, click_event=True, hover_event=False)
 
+# Process click
 if click_data:
     x = click_data[0]["x"]
     y = click_data[0]["y"]
     distance = math.hypot(x, y)
 
-    # Determine score
     score = next(
         (r["points"] for r in sorted(rings, key=lambda r: r["diameter"]) if distance <= r["diameter"]/2),
         0
@@ -67,12 +67,12 @@ if click_data:
     shot_number = len(st.session_state.shots) + 1
     st.session_state.shots.append({"shot": shot_number, "score": score, "x": x, "y": y})
 
-# --- Display shot log ---
+# Show shot log
 df = pd.DataFrame(st.session_state.shots)
 st.subheader("📋 Shot Log")
 st.dataframe(df)
 
-# --- Save to CSV ---
+# Save to CSV
 if st.button("💾 Save as CSV"):
     df.to_csv("shot_log.csv", index=False)
     st.success("Saved to shot_log.csv")
