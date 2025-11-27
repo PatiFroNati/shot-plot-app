@@ -1,8 +1,11 @@
 import json
+import math
 from pathlib import Path
 
+import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from streamlit_plotly_events import plotly_events
 
 # ---------------------------------------------------------------------
 # Helpers & cached resources
@@ -38,7 +41,24 @@ canvas_width = 800
 max_diameter_mm = max(r["diameter"] for r in rings)
 pixels_per_mm = canvas_width / max_diameter_mm
 canvas_height = canvas_width  # square canvas
+canvas_center = canvas_width / 2
 
+if "shots" not in st.session_state:
+    st.session_state.shots = []
+if "active_target" not in st.session_state:
+    st.session_state.active_target = selected_target
+
+if selected_target != st.session_state.active_target:
+    st.session_state.shots = []
+    st.session_state.active_target = selected_target
+    st.info("Target changed — shot log cleared.")
+
+
+def compute_score(distance_mm: float) -> int:
+    for ring in sorted(rings, key=lambda r: r["diameter"]):
+        if distance_mm <= ring["diameter"] / 2:
+            return ring["points"]
+    return 0
 
 def build_specs_fig():
     fig = go.Figure()
@@ -88,10 +108,86 @@ def build_specs_fig():
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
     )
+
+    if st.session_state.shots:
+        fig.add_trace(
+            go.Scatter(
+                x=[shot["pixel_x"] for shot in st.session_state.shots],
+                y=[shot["pixel_y"] for shot in st.session_state.shots],
+                mode="markers",
+                marker=dict(color="red", size=10, line=dict(color="white", width=1)),
+                name="Shots",
+                hovertemplate="Shot %{customdata[0]}<br>x=%{customdata[1]} mm<br>y=%{customdata[2]} mm<br>Score=%{customdata[3]}<extra></extra>",
+                customdata=[
+                    (
+                        shot["shot"],
+                        round(shot["x_mm"], 2),
+                        round(shot["y_mm"], 2),
+                        shot["score"],
+                    )
+                    for shot in st.session_state.shots
+                ],
+            )
+        )
     return fig
 
 
-st.subheader("Plot preview")
-st.info("Rendering rings directly from target_specs.json.")
-st.plotly_chart(build_specs_fig(), use_container_width=True)
-st.caption("Click handling is temporarily disabled while we verify rendering.")
+st.subheader("Tap the target to log a shot")
+fig = build_specs_fig()
+clicked_points = plotly_events(
+    fig,
+    click_event=True,
+    select_event=False,
+    hover_event=False,
+    key="shot-plot",
+)
+
+if clicked_points:
+    point = clicked_points[0]
+    px = point["x"]
+    py = point["y"]
+    dx_px = px - canvas_center
+    dy_px = canvas_center - py  # invert Y
+    dx_mm = dx_px / pixels_per_mm
+    dy_mm = dy_px / pixels_per_mm
+    distance_mm = math.hypot(dx_mm, dy_mm)
+    score = compute_score(distance_mm)
+
+    shot_number = len(st.session_state.shots) + 1
+    st.session_state.shots.append(
+        {
+            "shot": shot_number,
+            "score": score,
+            "x_mm": dx_mm,
+            "y_mm": dy_mm,
+            "pixel_x": px,
+            "pixel_y": py,
+        }
+    )
+
+st.subheader("📋 Shot Log")
+if st.session_state.shots:
+    df = pd.DataFrame(
+        [
+            {
+                "Shot": shot["shot"],
+                "Score": shot["score"],
+                "X (mm)": round(shot["x_mm"], 2),
+                "Y (mm)": round(shot["y_mm"], 2),
+            }
+            for shot in st.session_state.shots
+        ]
+    )
+    st.dataframe(df, use_container_width=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("💾 Save as CSV"):
+            df.to_csv("shot_log.csv", index=False)
+            st.success("Saved to shot_log.csv")
+    with col2:
+        if st.button("🧹 Clear shots"):
+            st.session_state.shots = []
+            st.experimental_rerun()
+else:
+    st.info("No shots logged yet — click the plot above to start.")
