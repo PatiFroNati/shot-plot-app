@@ -47,10 +47,13 @@ if "shots" not in st.session_state:
     st.session_state.shots = []
 if "active_target" not in st.session_state:
     st.session_state.active_target = selected_target
+if "last_click_signature" not in st.session_state:
+    st.session_state.last_click_signature = None
 
 if selected_target != st.session_state.active_target:
     st.session_state.shots = []
     st.session_state.active_target = selected_target
+    st.session_state.last_click_signature = None
     st.info("Target changed — shot log cleared.")
 
 
@@ -146,6 +149,16 @@ if clicked_points:
     point = clicked_points[0]
     px = point["x"]
     py = point["y"]
+
+    click_signature = (point.get("curveNumber"), point.get("pointIndex"), px, py)
+    if click_signature == st.session_state.last_click_signature:
+        point = None
+    else:
+        st.session_state.last_click_signature = click_signature
+
+if clicked_points and point:
+    px = point["x"]
+    py = point["y"]
     dx_px = px - canvas_center
     dy_px = canvas_center - py  # invert Y
     dx_mm = dx_px / pixels_per_mm
@@ -164,6 +177,7 @@ if clicked_points:
             "pixel_y": py,
         }
     )
+    st.experimental_rerun()
 
 st.subheader("📋 Shot Log")
 if st.session_state.shots:
