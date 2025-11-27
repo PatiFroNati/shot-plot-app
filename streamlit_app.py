@@ -2,11 +2,19 @@ import streamlit as st
 import pandas as pd
 import math
 import json
+from pathlib import Path
 from streamlit_drawable_canvas import st_canvas
 from PIL import Image
 
 # --- Load target image ---
-target_img = Image.open("assets/target.png").convert("RGBA")
+ASSETS_DIR = Path(__file__).parent / "assets"
+TARGET_PATH = ASSETS_DIR / "target.png"
+
+if not TARGET_PATH.exists():
+    st.error(f"Target image not found at {TARGET_PATH}")
+    st.stop()
+
+target_img = Image.open(TARGET_PATH).convert("RGBA")
 canvas_width, canvas_height = target_img.size
 
 # --- Initialize shot log ---
@@ -20,10 +28,12 @@ canvas_result = st_canvas(
     fill_color="rgba(255, 0, 0, 0.3)",  # red marker
     stroke_width=2,
     background_image=target_img,        # ✅ target overlay
-    background_color=None,              # None keeps canvas transparent so image shows
+    background_color="rgba(0, 0, 0, 0)",# transparent canvas so image shows
     height=canvas_height,
     width=canvas_width,
     drawing_mode="point",               # click = point
+    point_display_radius=6,
+    update_streamlit=True,
     key="canvas",
 )
 
