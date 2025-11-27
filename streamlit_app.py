@@ -1,27 +1,26 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from streamlit_plotly_events import plotly_events
+from streamlit_drawable_canvas import st_canvas
 import math
 import json
 
-# Load target specs
+# --- Load target specs ---
 with open("target_specs.json", "r") as f:
     specs = json.load(f)
 
 target = next(t for t in specs["targets"] if t["type"] == "ISSF 10m Air Rifle Target")
 rings = target["rings"]
 
-# Initialize shot log
+# --- Initialize shot log ---
 if "shots" not in st.session_state:
     st.session_state.shots = []
 
 st.title("🔫 10m Air Rifle Shot Tracker")
 
-# Build target figure
+# --- Draw target with Plotly ---
 fig = go.Figure()
 
-# Draw rings largest → smallest
 for ring in sorted(rings, key=lambda r: r["diameter"], reverse=True):
     fig.add_shape(
         type="circle",
@@ -47,35 +46,45 @@ fig.update_layout(
     width=600, height=600,
     xaxis=dict(range=[-25, 25], zeroline=False),
     yaxis=dict(range=[-25, 25], scaleanchor="x", zeroline=False),
-    title="Click to record a shot"
+    title="Target"
 )
 
-# Render chart and capture click
-click_data = plotly_events(fig, click_event=True, hover_event=False)
-st.write("Raw click_data:", click_data)
+st.plotly_chart(fig, use_container_width=True)
 
-# Process click
-if click_data:
-    x = click_data[0]["x"]
-    y = click_data[0]["y"]
-    distance = math.hypot(x, y)
+# --- Click capture via drawable canvas ---
+canvas_result = st_canvas(
+    fill_color="rgba(255, 0, 0, 0.3)",  # red marker
+    stroke_width=2,
+    background_color="white",
+    update_streamlit=True,
+    height=600,
+    width=600,
+    drawing_mode="point",  # click = point
+    key="canvas",
+)
 
-    score = next(
-        (r["points"] for r in sorted(rings, key=lambda r: r["diameter"]) if distance <= r["diameter"]/2),
-        0
-    )
+if canvas_result.json_data is not None:
+    for obj in canvas_result.json_data["objects"]:
+        # Convert canvas coordinates to target coordinates
+        # Canvas origin is top-left, so we center it
+        x = obj["left"] - 300
+        y = 300 - obj["top"]
 
-    
+        distance = math.hypot(x, y)
+        score = next(
+            (r["points"] for r in sorted(rings, key=lambda r: r["diameter"]) if distance <= r["diameter"]/2),
+            0
+        )
 
-    shot_number = len(st.session_state.shots) + 1
-    st.session_state.shots.append({"shot": shot_number, "score": score, "x": x, "y": y})
+        shot_number = len(st.session_state.shots) + 1
+        st.session_state.shots.append({"shot": shot_number, "score": score, "x": x, "y": y})
 
-# Show shot log
+# --- Display shot log ---
 df = pd.DataFrame(st.session_state.shots)
 st.subheader("📋 Shot Log")
 st.dataframe(df)
 
-# Save to CSV
+# --- Save to CSV ---
 if st.button("💾 Save as CSV"):
     df.to_csv("shot_log.csv", index=False)
     st.success("Saved to shot_log.csv")
