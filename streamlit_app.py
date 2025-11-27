@@ -21,7 +21,7 @@ st.title("🔫 10m Air Rifle Shot Tracker")
 # --- Create target plot ---
 fig = go.Figure()
 
-# Draw concentric rings (largest first so smaller ones sit on top)
+# Draw concentric rings (largest first)
 for ring in sorted(rings, key=lambda r: r["diameter"], reverse=True):
     fig.add_shape(
         type="circle",
@@ -50,7 +50,7 @@ fig.update_layout(
     title="Click to record a shot"
 )
 
-# --- Capture click ---
+# --- Capture click (this both renders and listens) ---
 click_data = plotly_events(fig, click_event=True, hover_event=False)
 
 if click_data:
@@ -58,7 +58,7 @@ if click_data:
     y = click_data[0]["y"]
     distance = math.hypot(x, y)
 
-    # Determine score based on distance from center
+    # Determine score
     score = next(
         (r["points"] for r in sorted(rings, key=lambda r: r["diameter"]) if distance <= r["diameter"]/2),
         0
@@ -66,18 +66,6 @@ if click_data:
 
     shot_number = len(st.session_state.shots) + 1
     st.session_state.shots.append({"shot": shot_number, "score": score, "x": x, "y": y})
-
-    # Add new shot marker immediately
-    fig.add_trace(go.Scatter(
-        x=[x], y=[y],
-        mode="markers+text",
-        marker=dict(size=8, color="red"),
-        text=[f'{shot_number}'],
-        textposition="top center"
-    ))
-
-    # Re-render updated chart
-    st.plotly_chart(fig, use_container_width=True)
 
 # --- Display shot log ---
 df = pd.DataFrame(st.session_state.shots)
