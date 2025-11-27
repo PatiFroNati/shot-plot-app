@@ -1,5 +1,7 @@
+import base64
 import json
 import math
+from io import BytesIO
 from pathlib import Path
 
 import pandas as pd
@@ -29,6 +31,15 @@ def load_target_image(path: Path):
     return Image.open(path).convert("RGBA")
 
 
+@st.cache_data
+def image_to_data_url(image: Image.Image) -> str:
+    """Convert PIL image to base64 data URL to avoid flicker on rerender."""
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    return f"data:image/png;base64,{encoded}"
+
+
 def get_target_config(targets, target_name: str):
     return next(target for target in targets if target["type"] == target_name)
 
@@ -49,6 +60,7 @@ target_options = [t["type"] for t in targets]
 
 target_img = load_target_image(TARGET_IMG_PATH)
 canvas_width, canvas_height = target_img.size
+target_data_url = image_to_data_url(target_img)
 
 st.title("🎯 Shot Plotter")
 selected_target = st.sidebar.selectbox("Target type", target_options, index=target_options.index("ISSF 10m Air Rifle Target"))
@@ -57,6 +69,8 @@ if "shots" not in st.session_state:
     st.session_state.shots = []
 if "active_target" not in st.session_state:
     st.session_state.active_target = selected_target
+if "last_click_signature" not in st.session_state:
+    st.session_state.last_click_signature = None
 
 if selected_target != st.session_state.active_target:
     st.session_state.shots = []
@@ -74,7 +88,7 @@ pixels_per_mm = canvas_width / max_diameter_mm
 fig = go.Figure()
 fig.add_layout_image(
     dict(
-        source=target_img,
+        source=target_data_url,
         xref="x",
         yref="y",
         x=0,
@@ -136,6 +150,14 @@ if clicked_points:
     point = clicked_points[0]
     px = point["x"]
     py = point["y"]
+    click_signature = (point.get("curveNumber"), point.get("pointIndex"), px, py)
+
+    if click_signature == st.session_state.last_click_signature:
+        point = None
+    else:
+        st.session_state.last_click_signature = click_signature
+
+if clicked_points and point:
 
     # Convert to a center-origin coordinate system in millimeters
     dx_px = px - canvas_width / 2
@@ -156,7 +178,6 @@ if clicked_points:
             "pixel_y": py,
         }
     )
-    st.experimental_rerun()
 
 # ---------------------------------------------------------------------
 # Shot log + export
