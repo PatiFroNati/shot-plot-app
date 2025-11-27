@@ -129,7 +129,7 @@ def build_specs_fig():
                 showarrow=False,
                 font=dict(color="#000000", size=12, family="Arial"),
                 xanchor="center",
-                yanchor="bottom"
+                yanchor="top"
             )
 
     fig.update_xaxes(visible=False, range=[0, canvas_width], scaleanchor="y", scaleratio=1)
