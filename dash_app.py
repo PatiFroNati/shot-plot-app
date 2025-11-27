@@ -32,6 +32,25 @@ def build_target_figure(target_name: str, shots: list[dict]) -> go.Figure:
     center = canvas_size / 2
 
     fig = go.Figure()
+    
+    # Add invisible scatter trace covering entire plot area to capture clicks
+    # Plotly clickData only fires on traces, not shapes or empty plot areas
+    # Create a filled rectangle using scatter points
+    fig.add_trace(
+        go.Scatter(
+            x=[0, canvas_size, canvas_size, 0, 0],
+            y=[0, 0, canvas_size, canvas_size, 0],
+            mode="lines+markers",
+            line=dict(width=0),
+            marker=dict(size=0.1, opacity=0),
+            fill="toself",
+            fillcolor="rgba(0,0,0,0)",
+            hoverinfo="skip",
+            showlegend=False,
+            name="click-area",
+        )
+    )
+    
     for ring in sorted(rings, key=lambda r: r["diameter"], reverse=True):
         radius_px = (ring["diameter"] / 2) * pixels_per_mm
         color = ring["color"]
@@ -116,7 +135,14 @@ app.layout = html.Div(
             id="target-select",
             clearable=False,
         ),
-        dcc.Graph(id="target-graph", config={"displayModeBar": False}),
+        dcc.Graph(
+            id="target-graph",
+            config={
+                "displayModeBar": False,
+                "doubleClick": "reset",
+                "modeBarButtonsToRemove": [],
+            },
+        ),
         html.Div(
             [
                 html.Button("Clear shots", id="clear-btn", n_clicks=0),
@@ -146,42 +172,56 @@ app.layout = html.Div(
 @app.callback(
     Output("shots-store", "data"),
     Input("target-graph", "clickData"),
+    Input("target-graph", "selectedData"),
     Input("clear-btn", "n_clicks"),
     Input("target-select", "value"),
     State("shots-store", "data"),
     prevent_initial_call=True,
 )
-def update_shots(click_data, clear_clicks, target_name, shots):
+def update_shots(click_data, selected_data, clear_clicks, target_name, shots):
     shots = shots or []
     triggered = callback_context.triggered_id
 
     if triggered in {"clear-btn", "target-select"}:
         return []
 
-    if triggered == "target-graph" and click_data:
-        point = click_data["points"][0]
-        canvas_size = 800
-        center = canvas_size / 2
-        max_diameter = max(r["diameter"] for r in get_target_config(target_name)["rings"])
-        pixels_per_mm = canvas_size / max_diameter
+    # Try clickData first, then selectedData
+    event_data = click_data or selected_data
+    
+    if triggered == "target-graph" and event_data and "points" in event_data:
+        try:
+            point = event_data["points"][0]
+            canvas_size = 800
+            center = canvas_size / 2
+            max_diameter = max(r["diameter"] for r in get_target_config(target_name)["rings"])
+            pixels_per_mm = canvas_size / max_diameter
 
-        px = point["x"]
-        py = point["y"]
-        dx_mm = (px - center) / pixels_per_mm
-        dy_mm = (center - py) / pixels_per_mm
-        distance_mm = math.hypot(dx_mm, dy_mm)
-        score = compute_score(target_name, distance_mm)
+            # Extract click coordinates
+            px = point.get("x", center)
+            py = point.get("y", center)
+            
+            # If coordinates are missing, skip this click
+            if px == center and py == center and "x" not in point:
+                return shots
+            
+            dx_mm = (px - center) / pixels_per_mm
+            dy_mm = (center - py) / pixels_per_mm
+            distance_mm = math.hypot(dx_mm, dy_mm)
+            score = compute_score(target_name, distance_mm)
 
-        shots.append(
-            {
-                "shot": len(shots) + 1,
-                "score": score,
-                "x_mm": dx_mm,
-                "y_mm": dy_mm,
-                "pixel_x": px,
-                "pixel_y": py,
-            }
-        )
+            shots.append(
+                {
+                    "shot": len(shots) + 1,
+                    "score": score,
+                    "x_mm": dx_mm,
+                    "y_mm": dy_mm,
+                    "pixel_x": px,
+                    "pixel_y": py,
+                }
+            )
+        except (KeyError, IndexError, TypeError) as e:
+            # If there's an error, just return existing shots
+            print(f"Error processing click: {e}, event_data: {event_data}")
 
     return shots
 
