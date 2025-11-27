@@ -46,16 +46,19 @@ fig.update_layout(
     width=600, height=600,
     xaxis=dict(range=[-25, 25], zeroline=False),
     yaxis=dict(range=[-25, 25], scaleanchor="x", zeroline=False),
+    margin=dict(l=0, r=0, t=30, b=0),
+    showlegend=False,
     title="Target"
 )
 
+# Render Plotly chart as background
 st.plotly_chart(fig, use_container_width=True)
 
-# --- Click capture via drawable canvas ---
+# --- Overlay drawable canvas ---
 canvas_result = st_canvas(
     fill_color="rgba(255, 0, 0, 0.3)",  # red marker
     stroke_width=2,
-    background_color="white",
+    background_color="rgba(0,0,0,0)",   # transparent so target shows through
     update_streamlit=True,
     height=600,
     width=600,
@@ -63,10 +66,10 @@ canvas_result = st_canvas(
     key="canvas",
 )
 
+# --- Process clicks ---
 if canvas_result.json_data is not None:
     for obj in canvas_result.json_data["objects"]:
         # Convert canvas coordinates to target coordinates
-        # Canvas origin is top-left, so we center it
         x = obj["left"] - 300
         y = 300 - obj["top"]
 
