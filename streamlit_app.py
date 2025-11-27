@@ -19,7 +19,7 @@ canvas_result = st_canvas(
     fill_color="rgba(255, 0, 0, 0.3)",  # red marker
     stroke_width=2,
     background_image=target_img,        # ✅ target overlay
-    background_color="rgba(0,0,0,0)",
+    background_color=None,              # None keeps canvas transparent so image shows
     height=50,
     width=50,
     drawing_mode="point",               # click = point
