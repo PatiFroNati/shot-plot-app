@@ -1,16 +1,12 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
-from streamlit_drawable_canvas import st_canvas
 import math
 import json
+from streamlit_drawable_canvas import st_canvas
+from PIL import Image
 
-# --- Load target specs ---
-with open("target_specs.json", "r") as f:
-    specs = json.load(f)
-
-target = next(t for t in specs["targets"] if t["type"] == "ISSF 10m Air Rifle Target")
-rings = target["rings"]
+# --- Load target image ---
+target_img = Image.open("target.png")  # replace with your target image file
 
 # --- Initialize shot log ---
 if "shots" not in st.session_state:
@@ -18,60 +14,30 @@ if "shots" not in st.session_state:
 
 st.title("🔫 10m Air Rifle Shot Tracker")
 
-# --- Draw target with Plotly ---
-fig = go.Figure()
-
-for ring in sorted(rings, key=lambda r: r["diameter"], reverse=True):
-    fig.add_shape(
-        type="circle",
-        xref="x", yref="y",
-        x0=-ring["diameter"]/2, y0=-ring["diameter"]/2,
-        x1=ring["diameter"]/2, y1=ring["diameter"]/2,
-        line=dict(color="black"),
-        fillcolor=ring["color"],
-        layer="below"
-    )
-
-# Add existing shots
-for shot in st.session_state.shots:
-    fig.add_trace(go.Scatter(
-        x=[shot["x"]], y=[shot["y"]],
-        mode="markers+text",
-        marker=dict(size=8, color="red"),
-        text=[f'{shot["shot"]}'],
-        textposition="top center"
-    ))
-
-fig.update_layout(
-    width=600, height=600,
-    xaxis=dict(range=[-25, 25], zeroline=False),
-    yaxis=dict(range=[-25, 25], scaleanchor="x", zeroline=False),
-    margin=dict(l=0, r=0, t=30, b=0),
-    showlegend=False,
-    title="Target"
-)
-
-# Render Plotly chart as background
-st.plotly_chart(fig, use_container_width=True)
-
-# --- Overlay drawable canvas ---
+# --- Canvas with target as background ---
 canvas_result = st_canvas(
     fill_color="rgba(255, 0, 0, 0.3)",  # red marker
     stroke_width=2,
-    background_color="rgba(0,0,0,0)",   # transparent so target shows through
+    background_image=target_img,        # ✅ target overlay
     update_streamlit=True,
     height=600,
     width=600,
-    drawing_mode="point",  # click = point
+    drawing_mode="point",               # click = point
     key="canvas",
 )
 
 # --- Process clicks ---
 if canvas_result.json_data is not None:
     for obj in canvas_result.json_data["objects"]:
-        # Convert canvas coordinates to target coordinates
+        # Convert canvas coordinates to center-based coordinates
         x = obj["left"] - 300
         y = 300 - obj["top"]
+
+        # Example scoring logic (using your JSON specs)
+        with open("target_specs.json", "r") as f:
+            specs = json.load(f)
+        target = next(t for t in specs["targets"] if t["type"] == "ISSF 10m Air Rifle Target")
+        rings = target["rings"]
 
         distance = math.hypot(x, y)
         score = next(
