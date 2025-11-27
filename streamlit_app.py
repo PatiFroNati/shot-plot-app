@@ -52,6 +52,7 @@ fig.update_layout(
 
 # Render chart and capture click
 click_data = plotly_events(fig, click_event=True, hover_event=False)
+st.write("Raw click_data:", click_data)
 
 # Process click
 if click_data:
@@ -63,6 +64,8 @@ if click_data:
         (r["points"] for r in sorted(rings, key=lambda r: r["diameter"]) if distance <= r["diameter"]/2),
         0
     )
+
+    
 
     shot_number = len(st.session_state.shots) + 1
     st.session_state.shots.append({"shot": shot_number, "score": score, "x": x, "y": y})
