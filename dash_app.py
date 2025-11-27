@@ -98,6 +98,7 @@ def build_target_figure(target_name: str, shots: list[dict]) -> go.Figure:
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         dragmode="pan",
+        clickmode="event+select",
     )
     return fig
 
@@ -108,6 +109,7 @@ target_options = [t["type"] for t in TARGET_SPECS]
 app.layout = html.Div(
     [
         html.H1("🎯 Shot Plotter (Dash)"),
+        html.P("Select a target, then click anywhere on the chart to log a shot."),
         dcc.Dropdown(
             options=[{"label": option, "value": option} for option in target_options],
             value="ISSF 10m Air Rifle Target",

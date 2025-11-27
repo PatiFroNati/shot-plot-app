@@ -12,13 +12,7 @@ A simple Streamlit app template for you to modify!
    $ pip install -r requirements.txt
    ```
 
-2. Run the Streamlit prototype (optional)
-
-   ```
-   $ streamlit run streamlit_app.py
-   ```
-
-3. Run the Dash app (recommended)
+2. Run the Dash app
 
    ```
    $ python dash_app.py
