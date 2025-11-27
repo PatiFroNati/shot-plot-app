@@ -98,7 +98,7 @@ def build_specs_fig():
         radius_px = (ring["diameter"] / 2) * pixels_per_mm
         fill_rgba = ring["color"]
         if len(fill_rgba) == 7:  # hex color e.g. #FFFFFF
-            fill_rgba = f"{fill_rgba}99"  # add alpha (~60%)
+            fill_rgba = f"{fill_rgba}"  # add alpha (~60%)
         fig.add_shape(
             type="circle",
             xref="x",
