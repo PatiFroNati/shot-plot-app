@@ -5,24 +5,24 @@ from streamlit_plotly_events import plotly_events
 import math
 import json
 
-# Load target specs
-with open("target_specs.json") as f:
+# --- Load target specs ---
+with open("target_specs.json", "r") as f:
     specs = json.load(f)
 
 target = next(t for t in specs["targets"] if t["type"] == "ISSF 10m Air Rifle Target")
 rings = target["rings"]
 
-# Initialize shot log
+# --- Initialize shot log ---
 if "shots" not in st.session_state:
     st.session_state.shots = []
 
 st.title("🔫 10m Air Rifle Shot Tracker")
 
-# Create target plot
+# --- Create target plot ---
 fig = go.Figure()
 
-# Draw concentric rings
-for ring in sorted(rings, key=lambda r: r["points"], reverse=True):
+# Draw concentric rings (largest first so smaller ones sit on top)
+for ring in sorted(rings, key=lambda r: r["diameter"], reverse=True):
     fig.add_shape(
         type="circle",
         xref="x", yref="y",
@@ -50,23 +50,41 @@ fig.update_layout(
     title="Click to record a shot"
 )
 
-# Capture click
+# --- Capture click ---
 click_data = plotly_events(fig, click_event=True, hover_event=False)
 
 if click_data:
     x = click_data[0]["x"]
     y = click_data[0]["y"]
     distance = math.hypot(x, y)
-    score = next((r["points"] for r in sorted(rings, key=lambda r: r["diameter"]) if distance <= r["diameter"]/2), 0)
+
+    # Determine score based on distance from center
+    score = next(
+        (r["points"] for r in sorted(rings, key=lambda r: r["diameter"]) if distance <= r["diameter"]/2),
+        0
+    )
+
     shot_number = len(st.session_state.shots) + 1
     st.session_state.shots.append({"shot": shot_number, "score": score, "x": x, "y": y})
 
-# Display shot log
+    # Add new shot marker immediately
+    fig.add_trace(go.Scatter(
+        x=[x], y=[y],
+        mode="markers+text",
+        marker=dict(size=8, color="red"),
+        text=[f'{shot_number}'],
+        textposition="top center"
+    ))
+
+    # Re-render updated chart
+    st.plotly_chart(fig, use_container_width=True)
+
+# --- Display shot log ---
 df = pd.DataFrame(st.session_state.shots)
 st.subheader("📋 Shot Log")
 st.dataframe(df)
 
-# Save to CSV
+# --- Save to CSV ---
 if st.button("💾 Save as CSV"):
     df.to_csv("shot_log.csv", index=False)
     st.success("Saved to shot_log.csv")
