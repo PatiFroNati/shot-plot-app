@@ -7,7 +7,7 @@ import json
 
 # Load target specs
 with open("target_specs.json") as f:
-    specs = json.load()
+    specs = json.load(f)
 
 target = next(t for t in specs["targets"] if t["type"] == "ISSF 10m Air Rifle Target")
 rings = target["rings"]
