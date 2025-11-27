@@ -6,7 +6,8 @@ from streamlit_drawable_canvas import st_canvas
 from PIL import Image
 
 # --- Load target image ---
-target_img = Image.open("assets/target.png")  # replace with your target image file
+target_img = Image.open("assets/target.png").convert("RGBA")
+canvas_width, canvas_height = target_img.size
 
 # --- Initialize shot log ---
 if "shots" not in st.session_state:
@@ -20,18 +21,22 @@ canvas_result = st_canvas(
     stroke_width=2,
     background_image=target_img,        # ✅ target overlay
     background_color=None,              # None keeps canvas transparent so image shows
-    height=50,
-    width=50,
+    height=canvas_height,
+    width=canvas_width,
     drawing_mode="point",               # click = point
     key="canvas",
 )
 
 # --- Process clicks ---
 if canvas_result.json_data is not None:
-    for obj in canvas_result.json_data["objects"]:
+    objects = canvas_result.json_data.get("objects", [])
+    center_x = canvas_width / 2
+    center_y = canvas_height / 2
+
+    for obj in objects:
         # Convert canvas coordinates to center-based coordinates
-        x = obj["left"] - 300
-        y = 300 - obj["top"]
+        x = obj["left"] - center_x
+        y = center_y - obj["top"]
 
         # Example scoring logic (using your JSON specs)
         with open("target_specs.json", "r") as f:
