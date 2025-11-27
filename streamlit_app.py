@@ -107,7 +107,7 @@ def build_specs_fig():
             y0=canvas_height / 2 - radius_px,
             x1=canvas_width / 2 + radius_px,
             y1=canvas_height / 2 + radius_px,
-            line=dict(color=ring["color"], width=2),
+            line=dict(color="#000000", width=1),
             fillcolor=fill_rgba,
             opacity=1.0,
         )
