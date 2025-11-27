@@ -118,9 +118,8 @@ def build_specs_fig():
                 y=canvas_height / 2,
                 text=ring["ring"],
                 showarrow=False,
-                font=dict(color="#000000", size=12, family="Monospace"),
-                bgcolor="rgba(255,255,255,0.7)",
-                xanchor="left",
+                font=dict(color="#000000", size=12, family="Arial"),
+                xanchor="right",
                 yanchor="middle",
             )
             fig.add_annotation(
