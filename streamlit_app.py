@@ -6,7 +6,7 @@ from streamlit_drawable_canvas import st_canvas
 from PIL import Image
 
 # --- Load target image ---
-target_img = Image.open("target.png")  # replace with your target image file
+target_img = Image.open("assets/target.png")  # replace with your target image file
 
 # --- Initialize shot log ---
 if "shots" not in st.session_state:
